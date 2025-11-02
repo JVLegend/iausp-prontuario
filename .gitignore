@@ -34,3 +34,71 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# ============================================================================
+# Python Project - IAUSP Prontuário
+# ============================================================================
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Ambientes virtuais
+venv/
+env/
+ENV/
+.venv
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Dados sensíveis (LGPD)
+dados_pacientes/
+*.json
+!checkpoint.example.json
+
+# CSVs de dados
+data/*.csv
+data/*.parquet
+
+# Logs e debug
+errors/
+*.log
+checkpoint.json
+
+# Screenshots e HTML debug (exceto legado)
+*.png
+*.html
+!legado/*.png
+!legado/*.html
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+!legado/*.ipynb
+
+# ChromeDriver
+3rdparty/chromedriver.exe
+3rdparty/chromedriver

@@ -561,6 +561,88 @@ r'Cor[:\s]*(\w+)'
 
 ---
 
+## Como Usar
+
+### Opção 1: Scripts Python (RECOMENDADO)
+
+Os scripts Python modulares são a **versão recomendada** do sistema, com melhorias em relação ao notebook Jupyter.
+
+**Vantagens:**
+- ✅ Carrega múltiplos CSVs automaticamente
+- ✅ Loop sobre todos os pacientes
+- ✅ Checkpoint system (retoma de onde parou)
+- ✅ Rate limiting anti-detecção
+- ✅ Logs com timestamps (icecream)
+- ✅ Credenciais seguras (.env)
+
+**Guia Rápido:**
+
+1. **Instalar dependências:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+2. **Configurar credenciais** (criar arquivo `.env`):
+   ```bash
+   PEP_USUARIO=seu_usuario
+   PEP_SENHA=sua_senha
+   PEP_EMPRESA=ICHC
+   ```
+
+3. **Colocar CSVs** na pasta `data/`:
+   ```
+   data/
+   ├── AGE_CONS_REAL_RES_20251024_1014.csv
+   ├── AGE_CONS_REAL_RES_20251025_0900.csv
+   └── ... (todos os CSVs do SIGH)
+   ```
+
+4. **Executar:**
+   ```bash
+   python src/main.py
+   ```
+
+5. **Modo teste** (recomendado primeiro):
+   - O script perguntará: `Processar apenas os primeiros 5 pacientes? (s/N)`
+   - Digite `s` para testar com 5 pacientes
+
+6. **Verificar outputs** em `dados_pacientes/`
+
+**Documentação completa:** Ver [QUICK_START.md](QUICK_START.md) e [src/README.md](src/README.md)
+
+---
+
+### Opção 2: Notebook Jupyter (Legado)
+
+O notebook original está em `legado/main.ipynb` (apenas para referência).
+
+**Limitações:**
+- ❌ Processa apenas 1 paciente hardcoded
+- ❌ Lê apenas 1 CSV por vez
+- ❌ Sem checkpoint (perde progresso)
+- ❌ Credenciais expostas no código
+
+**Uso (não recomendado para produção):**
+
+1. **Abrir Jupyter:**
+   ```bash
+   jupyter notebook legado/main.ipynb
+   ```
+
+2. **Editar célula de configuração:**
+   ```python
+   # Célula "Código Principal"
+   USUARIO = "seu_usuario"
+   SENHA = "sua_senha"
+   PRONTUARIO = "12345678"  # Apenas 1 paciente!
+   ```
+
+3. **Executar todas as células** (Cell → Run All)
+
+**Nota:** Use esta opção apenas para testes pontuais ou para entender o código original. Para processamento em lote, use os scripts Python.
+
+---
+
 ## Instalação e Requisitos
 
 ### Requisitos de Sistema

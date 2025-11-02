@@ -1,0 +1,17 @@
+# Sistema de Captura de Prontuários PEP
+# Dependências do projeto
+
+# Análise de dados
+pandas>=1.5.0
+pyarrow>=10.0.0  # Para formato Parquet
+
+# Web scraping
+selenium>=4.0.0
+
+# Utilidades
+python-dotenv>=0.19.0  # Gestão de variáveis de ambiente
+icecream>=2.1.0  # Debugging com timestamps
+
+# Opcional: para análise e processamento adicional
+# numpy>=1.21.0
+# openpyxl>=3.0.0  # Se precisar ler XLS
