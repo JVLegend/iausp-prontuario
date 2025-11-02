@@ -17,6 +17,7 @@
    - ✅ Rate limiting (5-15s entre pacientes)
    - ✅ Logs com timestamps (icecream)
    - ✅ Modo teste (5 pacientes) vs produção (todos)
+   - ✅ **NOVO:** Captura TODOS os atendimentos do histórico (não apenas o primeiro)
 
 3. **Arquivos criados:**
    - `requirements.txt` - Dependências

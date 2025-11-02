@@ -313,11 +313,31 @@ dados_paciente = {
     "cpf": "",
     "codigo_paciente": "",
     "naturalidade": "",
+    "atendimentos": [  # NOVO: Lista de todos os atendimentos do histórico
+        {
+            "data_atendimento": "01/10/2025 12:07",
+            "especialidade": "OFTALMOLOGIA",
+            "medico": "DR. JOAO SILVA",
+            "diagnostico": "H52.1 - MIOPIA",
+            "subespecialidade": "RETINA",
+            "historico_anamnese": "Paciente relata...",
+            "texto_completo": "...",
+            "data_captura": "2025-11-02 14:30:00"
+        }
+        # ... mais atendimentos
+    ],
+    "total_atendimentos": 2,  # NOVO: Contador de atendimentos capturados
     "data_captura": "2025-11-02 14:13:18"
 }
 ```
 
-**4 Estratégias Paralelas de Captura:**
+**NOVIDADE:** O sistema agora captura **TODOS os atendimentos** do histórico do paciente (não apenas o primeiro selecionado). Para cada atendimento encontrado no histórico lateral, o script:
+1. Clica no item do histórico
+2. Aguarda o carregamento do conteúdo
+3. Captura os dados do AMF exibido
+4. Adiciona à lista `atendimentos[]`
+
+**4 Estratégias Paralelas de Captura (Dados Demográficos):**
 
 ##### Estratégia 1: Captura do Nome Principal
 
@@ -414,7 +434,8 @@ RESUMO DA CAPTURA:
 ✓ codigo_paciente: 2171994
 ✗ naturalidade: (não capturado)
 
-Total: 5/6 dados capturados
+Total demográficos: 5/6 dados capturados
+Total atendimentos: 2 capturado(s)
 
 ✓ Dados salvos em: dados_pacientes/paciente_92570653_20251024141318.json
 ✓ HTML salvo para debug em: dados_pacientes/page_source_92570653_20251024141318.html

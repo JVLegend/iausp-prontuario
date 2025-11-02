@@ -138,9 +138,34 @@ Se o script for interrompido:
     "cpf": "12345678901",
     "codigo_paciente": "2171994",
     "naturalidade": "SAO PAULO",
+    "atendimentos": [
+        {
+            "data_atendimento": "01/10/2025 12:07",
+            "especialidade": "OFTALMOLOGIA",
+            "medico": "DR. JOAO SILVA",
+            "diagnostico": "H52.1 - MIOPIA",
+            "subespecialidade": "RETINA",
+            "historico_anamnese": "Paciente relata diminuição da acuidade visual...",
+            "texto_completo": "...",
+            "data_captura": "2025-11-02 14:30:00"
+        },
+        {
+            "data_atendimento": "02/09/2025 09:54",
+            "especialidade": "OFTALMOLOGIA",
+            "medico": "DRA. MARIA SANTOS",
+            "diagnostico": "H52.2 - ASTIGMATISMO",
+            "subespecialidade": "REFRAÇÃO",
+            "historico_anamnese": "Retorno após exame de refração...",
+            "texto_completo": "...",
+            "data_captura": "2025-11-02 14:30:05"
+        }
+    ],
+    "total_atendimentos": 2,
     "data_captura": "2025-11-02 14:30:00"
 }
 ```
+
+**NOVIDADE:** Agora o sistema captura **TODOS os atendimentos** do histórico do paciente, não apenas o primeiro!
 
 ### Checkpoint
 

@@ -530,20 +530,225 @@ def selecionar_paciente(driver: webdriver.Chrome, prontuario: Optional[str] = No
 # CAPTURA DE DADOS
 # ============================================================================
 
+def clicar_em_todos_atendimentos(driver: webdriver.Chrome) -> List:
+    """
+    Clica em cada item do histórico de atendimentos (lado direito) e retorna lista de elementos.
+
+    Args:
+        driver: WebDriver do Selenium
+
+    Returns:
+        Lista de elementos clicáveis do histórico
+    """
+    ic("Procurando lista de atendimentos no histórico...")
+
+    # Possíveis seletores para os itens do histórico (lado direito)
+    historico_selectors = [
+        "div.historico-item",
+        "div[class*='historico']",
+        "div[class*='lista'] div[class*='item']",
+        "mat-list-item",
+        "div[role='listitem']",
+        ".history-item",
+        ".timeline-item",
+        # Seletores que contenham data (formato DD/MM/YYYY HH:MM)
+        "//div[contains(text(), '/') and contains(text(), ':')]/..",
+        # Elementos clicáveis que tenham texto com data
+        "//*[contains(@class, 'clickable') or @role='button'][.//*[contains(text(), '/')]]",
+    ]
+
+    itens_historico = []
+
+    for selector in historico_selectors:
+        try:
+            if selector.startswith('//'):
+                elements = driver.find_elements(By.XPATH, selector)
+            else:
+                elements = driver.find_elements(By.CSS_SELECTOR, selector)
+
+            if elements:
+                # Filtrar apenas elementos visíveis e clicáveis
+                elementos_visiveis = [
+                    elem for elem in elements
+                    if elem.is_displayed() and elem.is_enabled()
+                ]
+
+                if elementos_visiveis:
+                    ic(f"✓ Encontrados {len(elementos_visiveis)} itens com seletor: {selector}")
+                    itens_historico = elementos_visiveis
+                    break
+        except:
+            continue
+
+    if not itens_historico:
+        ic("⚠️ Tentando estratégia alternativa: procurar por textos com data...")
+
+        # Estratégia alternativa: procurar qualquer elemento que contenha data/hora
+        try:
+            # Procurar elementos que contenham padrão DD/MM/YYYY HH:MM
+            all_elements = driver.find_elements(
+                By.XPATH,
+                "//*[contains(text(), '/') and contains(text(), ':') and string-length(text()) >= 16]"
+            )
+
+            # Pegar os elementos pais (que são clicáveis)
+            parent_elements = []
+            for elem in all_elements:
+                try:
+                    parent = elem.find_element(By.XPATH, "..")
+                    if parent.is_displayed() and parent not in parent_elements:
+                        parent_elements.append(parent)
+                except:
+                    continue
+
+            if parent_elements:
+                ic(f"✓ Encontrados {len(parent_elements)} itens via estratégia alternativa")
+                itens_historico = parent_elements
+        except Exception as e:
+            ic(f"⚠️ Erro na estratégia alternativa: {e}")
+
+    return itens_historico
+
+
+def capturar_dados_atendimento(driver: webdriver.Chrome, index: int = None) -> Optional[Dict]:
+    """
+    Captura dados de UM ÚNICO atendimento (o que está atualmente selecionado).
+
+    Args:
+        driver: WebDriver do Selenium
+        index: Índice do atendimento (para referência no log)
+
+    Returns:
+        Dicionário com os dados do atendimento ou None
+    """
+    prefix = f"[Atendimento {index}] " if index is not None else ""
+
+    try:
+        ic(f"{prefix}Capturando dados do atendimento...")
+
+        # Aguardar página carregar
+        time.sleep(2)
+
+        # Dicionário para armazenar os dados deste atendimento
+        dados_atendimento = {
+            "data_atendimento": "",
+            "especialidade": "",
+            "medico": "",
+            "diagnostico": "",
+            "subespecialidade": "",
+            "historico_anamnese": "",
+            "texto_completo": "",
+            "data_captura": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
+
+        # Capturar todo o texto visível da área de conteúdo
+        try:
+            # Tentar encontrar área de conteúdo principal
+            content_selectors = [
+                "div[class*='content']",
+                "div[class*='conteudo']",
+                "mat-card-content",
+                "div[role='main']",
+                ".seguimento",
+                ".atendimento-content"
+            ]
+
+            conteudo_element = None
+            for selector in content_selectors:
+                try:
+                    conteudo_element = driver.find_element(By.CSS_SELECTOR, selector)
+                    if conteudo_element.is_displayed():
+                        break
+                except:
+                    continue
+
+            if conteudo_element:
+                dados_atendimento["texto_completo"] = conteudo_element.text
+            else:
+                # Fallback: pegar body inteiro
+                dados_atendimento["texto_completo"] = driver.find_element(By.TAG_NAME, "body").text
+
+            page_text = dados_atendimento["texto_completo"]
+
+        except Exception as e:
+            ic(f"{prefix}⚠️ Erro ao capturar texto: {e}")
+            page_text = ""
+
+        # Estratégias de captura via regex
+        patterns = {
+            "data_atendimento": [
+                r'(\d{2}/\d{2}/\d{4}\s+\d{2}:\d{2})',  # DD/MM/YYYY HH:MM
+                r'Data[:\s]*(\d{2}/\d{2}/\d{4})',
+            ],
+            "subespecialidade": [
+                r'Subespecialidade\s*\(por[:\s]*([^\n]+)',
+                r'Subespecialidade[:\s]*([^\n]+)',
+            ],
+            "diagnostico": [
+                r'Diagnóstico\s*\(por[:\s]*([^\n]+)',
+                r'Diagnóstico[:\s]*([^\n]+)',
+                r'Descolamento de retina[^\n]*',
+            ],
+            "medico": [
+                r'(?:Dr\.|Dra\.)\s*([A-Z\s]+)',
+            ]
+        }
+
+        for campo, padroes in patterns.items():
+            if not dados_atendimento[campo]:
+                for padrao in padroes:
+                    match = re.search(padrao, page_text, re.IGNORECASE)
+                    if match:
+                        valor = match.group(1).strip() if match.lastindex >= 1 else match.group(0).strip()
+                        dados_atendimento[campo] = valor
+                        ic(f"{prefix}✓ {campo}: {valor}")
+                        break
+
+        # Capturar histórico/anamnese (geralmente texto longo)
+        try:
+            # Procurar por seções de texto longo
+            historico_patterns = [
+                r'Históri[oc]o/Anamnese[:\s]*(.{50,}?)(?=\n\n|\Z)',
+                r'POS RETIR[^\n]+\n(.{50,}?)(?=\n\n|\Z)',
+            ]
+
+            for pattern in historico_patterns:
+                match = re.search(pattern, page_text, re.IGNORECASE | re.DOTALL)
+                if match:
+                    dados_atendimento["historico_anamnese"] = match.group(1).strip()[:500]  # Limitar a 500 chars
+                    ic(f"{prefix}✓ Histórico capturado ({len(dados_atendimento['historico_anamnese'])} chars)")
+                    break
+        except:
+            pass
+
+        # Verificar se capturou algo útil
+        campos_preenchidos = sum(1 for k, v in dados_atendimento.items()
+                                if k not in ["texto_completo", "data_captura"] and v)
+
+        ic(f"{prefix}Campos capturados: {campos_preenchidos}/5")
+
+        return dados_atendimento
+
+    except Exception as e:
+        ic(f"{prefix}⚠️ Erro ao capturar atendimento: {e}")
+        return None
+
+
 def capturar_dados_paciente(driver: webdriver.Chrome, prontuario: str) -> Optional[Dict]:
     """
     Captura os dados do paciente da página do PEP.
+    NOVA VERSÃO: Clica em todos os atendimentos do histórico e captura dados de cada um.
 
     Args:
         driver: WebDriver do Selenium
         prontuario: Número do prontuário
 
     Returns:
-        Dicionário com os dados capturados ou None se falhar
+        Dicionário com os dados capturados incluindo lista de todos os atendimentos
     """
     try:
         ic("="*70)
-        ic("ETAPA 5: CAPTURA DE DADOS DO PACIENTE")
+        ic("ETAPA 5: CAPTURA DE DADOS DO PACIENTE + HISTÓRICO")
         ic("="*70)
 
         wait = WebDriverWait(driver, 10)
@@ -551,7 +756,81 @@ def capturar_dados_paciente(driver: webdriver.Chrome, prontuario: str) -> Option
         ic("Aguardando página carregar completamente...")
         time.sleep(4)
 
-        # Estrutura de dados
+        # ==================================================================
+        # NOVO: CAPTURAR MÚLTIPLOS ATENDIMENTOS
+        # ==================================================================
+
+        # Primeiro, encontrar todos os itens do histórico
+        itens_historico = clicar_em_todos_atendimentos(driver)
+
+        if not itens_historico:
+            ic("⚠️ Nenhum item de histórico encontrado, continuando com dados demográficos apenas...")
+            lista_atendimentos = []
+        else:
+            ic(f"✓ Encontrados {len(itens_historico)} atendimento(s) no histórico")
+
+            lista_atendimentos = []
+
+            # Clicar em cada item e capturar os dados
+            for i, item in enumerate(itens_historico, 1):
+                try:
+                    ic(f"\n{'='*70}")
+                    ic(f"Processando atendimento {i}/{len(itens_historico)}")
+                    ic(f"{'='*70}")
+
+                    # Scroll até o elemento para garantir que está visível
+                    try:
+                        driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", item)
+                        time.sleep(0.5)
+                    except:
+                        pass
+
+                    # Clicar no item
+                    try:
+                        item.click()
+                        ic(f"✓ Clicado no atendimento {i}")
+                    except:
+                        # Tentar via JavaScript se click normal falhar
+                        try:
+                            driver.execute_script("arguments[0].click();", item)
+                            ic(f"✓ Clicado no atendimento {i} (via JavaScript)")
+                        except Exception as e:
+                            ic(f"⚠️ Erro ao clicar no atendimento {i}: {e}")
+                            continue
+
+                    # Aguardar conteúdo carregar
+                    time.sleep(2)
+
+                    # Aguardar loading desaparecer (se houver)
+                    try:
+                        WebDriverWait(driver, 5).until(
+                            EC.invisibility_of_element_located((By.CLASS_NAME, "pep-loading-wrapper"))
+                        )
+                    except:
+                        pass
+
+                    # Capturar dados deste atendimento
+                    dados_atendimento = capturar_dados_atendimento(driver, index=i)
+
+                    if dados_atendimento:
+                        lista_atendimentos.append(dados_atendimento)
+                        ic(f"✓ Atendimento {i} capturado com sucesso")
+                    else:
+                        ic(f"⚠️ Falha ao capturar dados do atendimento {i}")
+
+                except Exception as e:
+                    ic(f"⚠️ Erro ao processar atendimento {i}: {e}")
+                    continue
+
+            ic(f"\n{'='*70}")
+            ic(f"✓ Total de atendimentos capturados: {len(lista_atendimentos)}/{len(itens_historico)}")
+            ic(f"{'='*70}\n")
+
+        # ==================================================================
+        # DADOS DEMOGRÁFICOS DO PACIENTE (MANTIDO DO CÓDIGO ORIGINAL)
+        # ==================================================================
+
+        # Estrutura de dados (dados demográficos + lista de atendimentos)
         dados_paciente = {
             "prontuario": prontuario,
             "nome_registro": "",
@@ -560,6 +839,8 @@ def capturar_dados_paciente(driver: webdriver.Chrome, prontuario: str) -> Option
             "cpf": "",
             "codigo_paciente": "",
             "naturalidade": "",
+            "atendimentos": lista_atendimentos,  # NOVO: lista de todos os atendimentos capturados
+            "total_atendimentos": len(lista_atendimentos),  # NOVO: contador
             "data_captura": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
 
@@ -750,16 +1031,20 @@ def capturar_dados_paciente(driver: webdriver.Chrome, prontuario: str) -> Option
         dados_capturados = 0
         dados_faltantes = []
 
-        for campo, valor in dados_paciente.items():
-            if campo not in ["prontuario", "data_captura"]:
-                if valor:
-                    ic(f"✓ {campo.replace('_', ' ').title()}: {valor}")
-                    dados_capturados += 1
-                else:
-                    ic(f"✗ {campo.replace('_', ' ').title()}: (não capturado)")
-                    dados_faltantes.append(campo)
+        # Campos demográficos para validação (excluindo campos especiais)
+        campos_demograficos = ["nome_registro", "data_nascimento", "raca", "cpf", "codigo_paciente", "naturalidade"]
 
-        ic(f"Total: {dados_capturados}/6 dados capturados")
+        for campo in campos_demograficos:
+            valor = dados_paciente.get(campo, "")
+            if valor:
+                ic(f"✓ {campo.replace('_', ' ').title()}: {valor}")
+                dados_capturados += 1
+            else:
+                ic(f"✗ {campo.replace('_', ' ').title()}: (não capturado)")
+                dados_faltantes.append(campo)
+
+        ic(f"Total demográficos: {dados_capturados}/6 dados capturados")
+        ic(f"Total atendimentos: {len(lista_atendimentos)} capturado(s)")
 
         # Salvar JSON
         root = get_root_path()
