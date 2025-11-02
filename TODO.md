@@ -24,7 +24,8 @@
    - `.env.example` - Template de configuração
    - `.gitignore` - Atualizado com regras Python
    - `QUICK_START.md` - Guia rápido de 5 minutos
-   - `src/README.md` - Documentação técnica dos módulos
+   - `CLAUDE.md` - Instruções para Claude Code
+   - `scripts/new_seleniumwire.ipynb` - Jupyter notebook completo com todas as melhorias
 
 ### 🚀 Como usar agora:
 
